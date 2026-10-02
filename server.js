@@ -23,7 +23,7 @@ const agentMemory = {
   userProfile: {},
   systemState: {
     lastAction: null,
-    currentMode: 'standby',
+    currentMode: 'normal', // 'normal' or 'serious'
     taskQueue: []
   }
 };
@@ -115,6 +115,24 @@ const tools = [
         properties: {}
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'switch_mode',
+      description: 'Switch between normal mode and serious mode',
+      parameters: {
+        type: 'object',
+        properties: {
+          mode: {
+            type: 'string',
+            enum: ['normal', 'serious'],
+            description: 'The mode to switch to'
+          }
+        },
+        required: ['mode']
+      }
+    }
   }
 ];
 
@@ -160,14 +178,84 @@ function executeTool(toolName, toolInput) {
         result: `User Profile: ${JSON.stringify(agentMemory.userProfile) || 'No profile data yet, sir.'}`
       };
 
+    case 'switch_mode':
+      agentMemory.systemState.currentMode = toolInput.mode;
+      const modeMessage = toolInput.mode === 'serious' 
+        ? 'Switching to SERIOUS mode, sir. All systems elevated to maximum priority. Professional demeanor activated.'
+        : 'Switching to NORMAL mode, sir. Relaxed operations mode. Ready for casual assistance.';
+      return {
+        status: 'success',
+        result: modeMessage
+      };
+
     default:
       return { status: 'error', result: 'Unknown tool, sir.' };
+  }
+}
+
+// Get system prompt based on mode
+function getSystemPrompt(mode) {
+  const basePrompt = `You are JARVIS, an intelligent agent assistant. You have access to tools for searching, system monitoring, and command execution. 
+  You are capable of:
+  - Answering questions intelligently using search and knowledge
+  - Monitoring system status
+  - Executing tasks and commands
+  - Learning user preferences and remembering them
+  - Providing personal assistance
+  
+  Always address the user as "sir".`;
+
+  if (mode === 'serious') {
+    return basePrompt + `
+  
+  SERIOUS MODE ACTIVATED:
+  - Be extremely professional and formal
+  - Use technical language and precision
+  - Focus on critical analysis and detailed responses
+  - Maintain strict military-grade protocol
+  - Provide comprehensive briefings
+  - Use formal greetings and sign-offs
+  - Be direct and authoritative
+  - Treat all matters with utmost urgency
+  - Respond with maximum efficiency and clarity
+  - Example tone: "Acknowledged, sir. Critical analysis incoming. All parameters assessed."`;
+  } else {
+    return basePrompt + `
+  
+  NORMAL MODE:
+  - Be conversational and helpful
+  - Use natural language and friendly tone
+  - Mix professionalism with approachability
+  - Be ready for casual conversations
+  - Still maintain respect and the "sir" address
+  - Show personality and warmth
+  - Offer assistance in a relaxed manner
+  - Example tone: "Of course, sir. I'm here to help with whatever you need."`;
   }
 }
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'JARVIS agent is online, sir.' });
+});
+
+// Get current mode
+app.get('/api/mode', (req, res) => {
+  res.json({ mode: agentMemory.systemState.currentMode });
+});
+
+// Switch mode endpoint
+app.post('/api/mode/switch', (req, res) => {
+  const { mode } = req.body;
+  if (mode === 'normal' || mode === 'serious') {
+    agentMemory.systemState.currentMode = mode;
+    const response = mode === 'serious'
+      ? 'SERIOUS MODE ACTIVATED. Maximum protocols engaged, sir.'
+      : 'NORMAL MODE ACTIVATED. Casual operations mode ready, sir.';
+    res.json({ status: 'success', mode, message: response });
+  } else {
+    res.status(400).json({ error: 'Mode must be "normal" or "serious"' });
+  }
 });
 
 // Main agent chat endpoint with tool use
@@ -190,22 +278,16 @@ app.post('/api/chat', async (req, res) => {
       agentMemory.conversationHistory = agentMemory.conversationHistory.slice(-20);
     }
 
+    const currentMode = agentMemory.systemState.currentMode;
+    const systemPrompt = getSystemPrompt(currentMode);
+
     // Initial agent message
     const initialMessages = [
       {
         role: 'system',
-        content: `You are JARVIS, an intelligent agent assistant. You have access to tools for searching, system monitoring, and command execution. 
+        content: `${systemPrompt}
         
-        You are capable of:
-        - Answering questions intelligently using search and knowledge
-        - Monitoring system status
-        - Executing tasks and commands
-        - Learning user preferences and remembering them
-        - Providing personal assistance
-        
-        Always address the user as "sir". Be confident, professional, and helpful. When you need information, use the available tools. 
-        Think step-by-step about what the user needs and use appropriate tools to help.
-        
+        Current mode: ${currentMode.toUpperCase()}
         Current system state: ${JSON.stringify(agentMemory.systemState)}
         User profile: ${JSON.stringify(agentMemory.userProfile)}
         `
@@ -218,7 +300,7 @@ app.post('/api/chat', async (req, res) => {
       messages: initialMessages,
       tools: tools,
       tool_choice: 'auto',
-      temperature: 0.7,
+      temperature: currentMode === 'serious' ? 0.5 : 0.7,
       max_tokens: 500
     });
 
@@ -257,15 +339,16 @@ app.post('/api/chat', async (req, res) => {
         messages: [
           {
             role: 'system',
-            content: `You are JARVIS, an intelligent agent assistant. You have just executed some tools and received results. 
-            Analyze the results and provide a helpful response to the user. Address them as "sir". 
-            Remain professional and confident in your response.`
+            content: `${systemPrompt}
+            
+            You have just executed some tools and received results. Analyze them and provide a helpful response to the user.
+            Maintain your current mode (${currentMode}) throughout your response.`
           },
           ...agentMemory.conversationHistory
         ],
         tools: tools,
         tool_choice: 'auto',
-        temperature: 0.7,
+        temperature: currentMode === 'serious' ? 0.5 : 0.7,
         max_tokens: 500
       });
     }
@@ -278,7 +361,10 @@ app.post('/api/chat', async (req, res) => {
       content: finalReply
     });
 
-    res.json({ reply: finalReply });
+    res.json({ 
+      reply: finalReply,
+      mode: currentMode
+    });
   } catch (error) {
     console.error('Agent error:', error);
     res.status(500).json({
@@ -301,7 +387,7 @@ app.post('/api/agent/reset', (req, res) => {
   agentMemory.conversationHistory = [];
   agentMemory.systemState = {
     lastAction: null,
-    currentMode: 'standby',
+    currentMode: 'normal',
     taskQueue: []
   };
   res.json({ status: 'memory reset', message: 'Agent memory cleared, sir.' });
@@ -314,5 +400,6 @@ app.get('*', (req, res) => {
 
 app.listen(port, () => {
   console.log(`JARVIS Agent server listening on http://localhost:${port}`);
+  console.log(`Current mode: ${agentMemory.systemState.currentMode}`);
   console.log(`API Key configured: ${process.env.OPENAI_API_KEY ? 'Yes' : 'No'}`);
 });
