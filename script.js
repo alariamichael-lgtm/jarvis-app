@@ -77,19 +77,19 @@ function handleAction(action) {
     switch (action) {
         case 'open-app':
             openModal(appModal);
-            responseDisplay.textContent = 'App launcher online. Select a target system.';
+            responseDisplay.textContent = 'App launcher online, sir. Select a target system.';
             break;
         case 'web-search':
             openModal(searchModal);
-            responseDisplay.textContent = 'Search module engaged. Enter a query.';
+            responseDisplay.textContent = 'Search module engaged, sir. Enter a query.';
             break;
         case 'map-view':
             openModal(mapModal);
-            responseDisplay.textContent = 'World map connected. Monitoring global activity.';
+            responseDisplay.textContent = 'World map connected, sir. Monitoring global activity.';
             break;
         case 'ai-chat':
             openModal(chatModal);
-            responseDisplay.textContent = 'Assistant interface available. Awaiting input.';
+            responseDisplay.textContent = 'Assistant interface available, sir. Awaiting input.';
             break;
         default:
             break;
@@ -133,18 +133,18 @@ function botReply(message) {
         return 'Hello, sir. All systems are online and ready for operation.';
     }
     if (lower.includes('search')) {
-        return 'Search functions are active. Use the web research panel to browse the current system data.';
+        return 'Search functions are active, sir. Use the web research panel to browse the current system data.';
     }
     if (lower.includes('map')) {
-        return 'The world map module is connected and ready for global monitoring.';
+        return 'The world map module is connected and ready for global monitoring, sir.';
     }
     if (lower.includes('status') || lower.includes('health')) {
-        return 'System health is optimal. Network, power, and core intelligence modules are stable.';
+        return 'System health is optimal, sir. Network, power, and core intelligence modules are stable.';
     }
     if (lower.includes('jarvis')) {
-        return 'JARVIS is online in a front-end control room mode with no model backend connected.';
+        return 'JARVIS is online in a front-end control room mode, sir, with no model backend connected.';
     }
-    return 'Command registered. This interface is running in local simulation mode without an external AI or voice model.';
+    return 'Command registered, sir. This interface is running in local simulation mode without an external AI or voice model.';
 }
 
 function initializeMap() {
@@ -189,19 +189,19 @@ document.querySelectorAll('.close-btn').forEach((closeBtn) => {
 searchBtn.addEventListener('click', () => {
     const query = searchInput.value || 'jarvis';
     renderSearchResults(query);
-    responseDisplay.textContent = `Research query engaged: ${query}`;
+    responseDisplay.textContent = `Research query engaged, sir: ${query}`;
 });
 
 voiceBtn.addEventListener('click', () => {
     const value = voiceInput.value.trim();
     if (!value) {
         setSystemStatus('LISTENING');
-        responseDisplay.textContent = 'Listening for a command...';
+        responseDisplay.textContent = 'Listening for your command, sir...';
         listeningIndicator.style.opacity = '1';
         return;
     }
 
-    responseDisplay.textContent = `Command received: ${value}`;
+    responseDisplay.textContent = `Command received, sir: ${value}`;
     setSystemStatus('ACTIVE');
     const action = value.toLowerCase();
 
@@ -215,7 +215,7 @@ voiceInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
         const value = voiceInput.value.trim();
         if (!value) return;
-        responseDisplay.textContent = `Command received: ${value}`;
+        responseDisplay.textContent = `Command received, sir: ${value}`;
         const lower = value.toLowerCase();
         if (lower.includes('search')) handleAction('web-search');
         if (lower.includes('map')) handleAction('map-view');
@@ -240,9 +240,9 @@ chatInput.addEventListener('keydown', (event) => {
 });
 
 const initialMessages = [
-    'System online. Primary modules are stable.',
-    'No external AI or voice model is connected in this version.',
-    'Command center ready for user interaction.'
+    'System online, sir. Primary modules are stable.',
+    'No external AI or voice model is connected in this version, sir.',
+    'Command center ready for your instructions, sir.'
 ];
 
 initialMessages.forEach((msg, index) => {
@@ -276,7 +276,7 @@ appItems.forEach((item) => {
         const url = item.dataset.url;
         if (url) {
             window.open(url, '_blank', 'noopener');
-            responseDisplay.textContent = `Launching ${item.textContent.trim()}...`;
+            responseDisplay.textContent = `Launching ${item.textContent.trim()}, sir...`;
         }
     });
 });
